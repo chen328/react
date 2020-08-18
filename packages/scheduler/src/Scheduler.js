@@ -206,7 +206,7 @@ function flushImmediateWork() {
 }
 
 function flushWork(didTimeout) {
-  isExecutingCallback = true;
+  isExecutingCallback = true;  //表示正在调用callback
   deadlineObject.didTimeout = didTimeout;
   try {
     if (didTimeout) {
@@ -214,7 +214,7 @@ function flushWork(didTimeout) {
       while (firstCallbackNode !== null) {
         // Read the current time. Flush all the callbacks that expire at or
         // earlier than that time. Then read the current time again and repeat.
-        // This optimizes for as few performance.now calls as possible.
+        // This optimizes for as few performance.now calls as possible. firstCallbackNode向后一直执行，直到第一个没过期的任务
         var currentTime = getCurrentTime();
         if (firstCallbackNode.expirationTime <= currentTime) {
           do {
@@ -228,7 +228,7 @@ function flushWork(didTimeout) {
         break;
       }
     } else {
-      // Keep flushing callbacks until we run out of time in the frame.
+      // Keep flushing callbacks until we run out of time in the frame. 
       if (firstCallbackNode !== null) {
         do {
           flushFirstCallback();
@@ -241,7 +241,7 @@ function flushWork(didTimeout) {
   } finally {
     isExecutingCallback = false;
     if (firstCallbackNode !== null) {
-      // There's still work remaining. Request another callback.
+      // There's still work remaining. Request another callback.   任务没有执行完，则再次调用ensureHostCallbackIsScheduled进入调度
       ensureHostCallbackIsScheduled();
     } else {
       isHostCallbackScheduled = false;
@@ -296,7 +296,10 @@ function unstable_wrapCallback(callback) {
     }
   };
 }
-
+/*
+- 创建一个调度节点newNode
+- 按照timoutAt的顺序加入到CallbackNode链
+*/
 function unstable_scheduleCallback(callback, deprecated_options) {
   var startTime =
     currentEventStartTime !== -1 ? currentEventStartTime : getCurrentTime();
@@ -327,7 +330,7 @@ function unstable_scheduleCallback(callback, deprecated_options) {
   }
 
   var newNode = {
-    callback,
+    callback, //performAsyncWork
     priorityLevel: currentPriorityLevel,
     expirationTime,
     next: null,
@@ -336,8 +339,8 @@ function unstable_scheduleCallback(callback, deprecated_options) {
 
   // Insert the new callback into the list, ordered first by expiration, then
   // by insertion. So the new callback is inserted any other callback with
-  // equal expiration.
-  if (firstCallbackNode === null) {
+  // equal expiration. firstCallbackNode  双向循环链表
+  if (firstCallbackNode === null) {   
     // This is the first callback in the list.
     firstCallbackNode = newNode.next = newNode.previous = newNode;
     ensureHostCallbackIsScheduled();
@@ -346,7 +349,7 @@ function unstable_scheduleCallback(callback, deprecated_options) {
     var node = firstCallbackNode;
     do {
       if (node.expirationTime > expirationTime) {
-        // The new callback expires before this one.
+        // The new callback expires before this one. 
         next = node;
         break;
       }
@@ -355,14 +358,14 @@ function unstable_scheduleCallback(callback, deprecated_options) {
 
     if (next === null) {
       // No callback with a later expiration was found, which means the new
-      // callback has the latest expiration in the list.
+      // callback has the latest expiration in the list.没找到更高的过期时间
       next = firstCallbackNode;
     } else if (next === firstCallbackNode) {
       // The new callback has the earliest expiration in the entire list.
       firstCallbackNode = newNode;
       ensureHostCallbackIsScheduled();
     }
-
+    //链表插入新节点
     var previous = next.previous;
     previous.next = next.previous = newNode;
     newNode.next = next;
@@ -447,7 +450,7 @@ var requestAnimationFrameWithTimeout = function(callback) {
     callback(timestamp);
   });
   rAFTimeoutID = localSetTimeout(function() {
-    // cancel the requestAnimationFrame
+    // cancel the requestAnimationFrame  超时取消
     localCancelAnimationFrame(rAFID);
     callback(getCurrentTime());
   }, ANIMATION_FRAME_TIMEOUT);
@@ -479,7 +482,7 @@ if (typeof window !== 'undefined' && window._schedMock) {
   // implementation using setTimeout.
   typeof window === 'undefined' ||
   // "addEventListener" might not be available on the window object
-  // if this is a mocked "window" object. So we need to validate that too.
+  // if this is a mocked "window" object. So we need to validate that too.  不是浏览器环境
   typeof window.addEventListener !== 'function'
 ) {
   var _callback = null;
@@ -496,6 +499,7 @@ if (typeof window !== 'undefined' && window._schedMock) {
       }
     }
   };
+  //调用requestAnimationFrame再设置了一个100ms的定时器，防止requestAnimationFrame太久不触发
   requestHostCallback = function(cb, ms) {
     if (_currentTime !== -1) {
       // Protect against re-entrancy.
@@ -576,16 +580,16 @@ if (typeof window !== 'undefined' && window._schedMock) {
     var didTimeout = false;
     if (frameDeadline - currentTime <= 0) {
       // There's no time left in this idle period. Check if the callback has
-      // a timeout and whether it's been exceeded.
+      // a timeout and whether it's been exceeded.   idle 超时
       if (prevTimeoutTime !== -1 && prevTimeoutTime <= currentTime) {
         // Exceeded the timeout. Invoke the callback even though there's no
-        // time left.
+        // time left.    callback 过期时间也超时
         didTimeout = true;
       } else {
         // No timeout.
         if (!isAnimationFrameScheduled) {
           // Schedule another animation callback so we retry later.
-          isAnimationFrameScheduled = true;
+          isAnimationFrameScheduled = true;  //代表正在执行
           requestAnimationFrameWithTimeout(animationTick);
         }
         // Exit without invoking the callback.
@@ -625,10 +629,10 @@ if (typeof window !== 'undefined' && window._schedMock) {
       return;
     }
 
-    var nextFrameTime = rafTime - frameDeadline + activeFrameTime;
+    var nextFrameTime = rafTime - frameDeadline + activeFrameTime; //一帧 所用时间  frameDeadline 初始 0   activeFrameTime 33
     if (
       nextFrameTime < activeFrameTime &&
-      previousFrameTime < activeFrameTime
+      previousFrameTime < activeFrameTime      //实际帧数比设置帧数更高  讲帧数设为实际值
     ) {
       if (nextFrameTime < 8) {
         // Defensive coding. We don't support higher frame rates than 120hz.
@@ -647,7 +651,7 @@ if (typeof window !== 'undefined' && window._schedMock) {
     } else {
       previousFrameTime = nextFrameTime;
     }
-    frameDeadline = rafTime + activeFrameTime;
+    frameDeadline = rafTime + activeFrameTime;//时间戳加一帧 
     if (!isMessageEventScheduled) {
       isMessageEventScheduled = true;
       window.postMessage(messageKey, '*');

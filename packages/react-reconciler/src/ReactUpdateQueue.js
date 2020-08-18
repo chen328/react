@@ -203,7 +203,7 @@ function appendUpdateToQueue<State>(
   queue: UpdateQueue<State>,
   update: Update<State>,
 ) {
-  // Append the update to the end of the list.
+  // Append the update to the end of the list. 插入尾部链表
   if (queue.lastUpdate === null) {
     // Queue is empty
     queue.firstUpdate = queue.lastUpdate = update;
@@ -214,19 +214,19 @@ function appendUpdateToQueue<State>(
 }
 
 export function enqueueUpdate<State>(fiber: Fiber, update: Update<State>) {
-  // Update queues are created lazily.
+  // Update queues are created lazily.  alternate:Fiber  在Fiber树更新的过程中，每个Fiber都会有一个跟其对应的Fiber `current <==> workInProgress` 在渲染完成之后他们会交换位置
   const alternate = fiber.alternate;
   let queue1;
   let queue2;
   if (alternate === null) {
-    // There's only one fiber.
+    // There's only one fiber. 第一次 Dom.render 时执行
     queue1 = fiber.updateQueue;
     queue2 = null;
     if (queue1 === null) {
       queue1 = fiber.updateQueue = createUpdateQueue(fiber.memoizedState);
     }
   } else {
-    // There are two owners.
+    // There are two owners. 已经更新过  queue不同  克隆Queue 使得queue1  queue2 的firstUpdate  lastUpdate 指向相同
     queue1 = fiber.updateQueue;
     queue2 = alternate.updateQueue;
     if (queue1 === null) {
@@ -261,7 +261,7 @@ export function enqueueUpdate<State>(fiber: Fiber, update: Update<State>) {
       appendUpdateToQueue(queue1, update);
       appendUpdateToQueue(queue2, update);
     } else {
-      // Both queues are non-empty. The last update is the same in both lists,
+      // Both queues are non-empty. The last update is the same in both lists, 存在相同结构里 只需要插入一个
       // because of structural sharing. So, only append to one of the lists.
       appendUpdateToQueue(queue1, update);
       // But we still need to update the `lastUpdate` pointer of queue2.

@@ -17,10 +17,10 @@ export const Never = MAX_SIGNED_31_BIT_INT;
 
 const UNIT_SIZE = 10;
 const MAGIC_NUMBER_OFFSET = 2;
-
+// | 0 取整数
 // 1 unit of expiration time represents 10ms.
 export function msToExpirationTime(ms: number): ExpirationTime {
-  // Always add an offset so that we don't clash with the magic number for NoWork.
+  // Always add an offset so that we don't clash with the magic number for NoWork.  忽略10ms内的差距
   return ((ms / UNIT_SIZE) | 0) + MAGIC_NUMBER_OFFSET;
 }
 
@@ -33,7 +33,7 @@ function ceiling(num: number, precision: number): number {
 }
 
 function computeExpirationBucket(
-  currentTime,
+  currentTime,//currentTime是  当前时间戳减去编译打包时候生成的时间戳再经过msToExpirationTime处理的，也就是((now / 10) | 0) + 2，所以这里的减去2可以无视    
   expirationInMs,
   bucketSizeMs,
 ): ExpirationTime {
@@ -45,14 +45,15 @@ function computeExpirationBucket(
     )
   );
 }
-
+//低权限 时间大
 export const LOW_PRIORITY_EXPIRATION = 5000;
 export const LOW_PRIORITY_BATCH_SIZE = 250;
-
+//((((currentTime - 2 + 5000 / 10) / 25) | 0) + 1) * 25     以25为单位向上增加的  currentTime =  10016 => 10525  10026 => 10525   10027 => 10550
+//抹平了25ms内计算过期时间的误差    让非常相近的两次更新 如 (一个周期多次setState)    得到相同的expirationTime
 export function computeAsyncExpiration(
   currentTime: ExpirationTime,
 ): ExpirationTime {
-  return computeExpirationBucket(
+  return computeExpirationBucket( 
     currentTime,
     LOW_PRIORITY_EXPIRATION,
     LOW_PRIORITY_BATCH_SIZE,
