@@ -443,7 +443,7 @@ var ANIMATION_FRAME_TIMEOUT = 100;
 var rAFID;
 var rAFTimeoutID;
 var requestAnimationFrameWithTimeout = function(callback) {
-  // schedule rAF and also a setTimeout
+  // schedule rAF and also a setTimeout  requestAnimationFrame
   rAFID = localRequestAnimationFrame(function(timestamp) {
     // cancel the setTimeout
     localClearTimeout(rAFTimeoutID);
@@ -629,11 +629,12 @@ if (typeof window !== 'undefined' && window._schedMock) {
       return;
     }
 
-    var nextFrameTime = rafTime - frameDeadline + activeFrameTime; //一帧 所用时间  frameDeadline 初始 0   activeFrameTime 33
+    var nextFrameTime = rafTime - frameDeadline + activeFrameTime; //一帧 所用时间  frameDeadline 初始 0   activeFrameTime/previousFrameTime 33
     if (
       nextFrameTime < activeFrameTime &&
       previousFrameTime < activeFrameTime      //实际帧数比设置帧数更高  讲帧数设为实际值
     ) {
+      //两次小于activeFrameTime
       if (nextFrameTime < 8) {
         // Defensive coding. We don't support higher frame rates than 120hz.
         // If the calculated frame time gets lower than 8, it is probably a bug.
