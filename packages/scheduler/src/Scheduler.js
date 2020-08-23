@@ -92,7 +92,10 @@ function ensureHostCallbackIsScheduled() {
   }
   requestHostCallback(flushWork, expirationTime);
 }
-
+/*
+- 如果当前队列中只有一个回调，清空队列
+- 调用回调并传入deadline对象 里面可以判断是否帧时间已经到
+*/
 function flushFirstCallback() {
   var flushedNode = firstCallbackNode;
 
@@ -563,6 +566,8 @@ if (typeof window !== 'undefined' && window._schedMock) {
     Math.random()
       .toString(36)
       .slice(2);
+  
+  // 设置 didTimeout   调用flushWork
   var idleTick = function(event) {
     if (event.source !== window || event.data !== messageKey) {
       return;
@@ -602,7 +607,7 @@ if (typeof window !== 'undefined' && window._schedMock) {
     if (prevScheduledCallback !== null) {
       isFlushingHostCallback = true;
       try {
-        prevScheduledCallback(didTimeout);
+        prevScheduledCallback(didTimeout);   //就是flushWork
       } finally {
         isFlushingHostCallback = false;
       }
@@ -621,7 +626,7 @@ if (typeof window !== 'undefined' && window._schedMock) {
       // frame ensures it's fired within the earliest possible frame. If we
       // waited until the end of the frame to post the callback, we risk the
       // browser skipping a frame and not firing the callback until the frame
-      // after that.
+      // after that.    scheduledHostCallback 全局回调
       requestAnimationFrameWithTimeout(animationTick);
     } else {
       // No pending work. Exit.
@@ -653,9 +658,9 @@ if (typeof window !== 'undefined' && window._schedMock) {
       previousFrameTime = nextFrameTime;
     }
     frameDeadline = rafTime + activeFrameTime;//时间戳加一帧 
-    if (!isMessageEventScheduled) {
+    if (!isMessageEventScheduled) {   //isMessageEventScheduled初始为false
       isMessageEventScheduled = true;
-      window.postMessage(messageKey, '*');
+      window.postMessage(messageKey, '*');  //触发idleTick
     }
   };
 

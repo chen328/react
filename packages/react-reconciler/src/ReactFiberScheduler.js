@@ -1510,7 +1510,7 @@ function computeExpirationForFiber(currentTime: ExpirationTime, fiber: Fiber) {
     }
   } else {
     // No explicit expiration context was set, and we're not currently
-    // performing work. Calculate a new expiration time.
+    // performing work. Calculate a new expiration time. 目前没有执行的工作
     if (fiber.mode & ConcurrentMode) {
       if (isBatchingInteractiveUpdates) {
         // This is an interactive update
