@@ -361,11 +361,11 @@ function unstable_scheduleCallback(callback, deprecated_options) {
 
     if (next === null) {
       // No callback with a later expiration was found, which means the new
-      // callback has the latest expiration in the list.没找到更高的过期时间
+      // callback has the latest expiration in the list.没找到比expirationTime 更大的
       next = firstCallbackNode;
     } else if (next === firstCallbackNode) {
-      // The new callback has the earliest expiration in the entire list.
-      firstCallbackNode = newNode;
+      // The new callback has the earliest expiration in the entire list.  优先级最高   头部变了重新调度
+      firstCallbackNode = newNode; 
       ensureHostCallbackIsScheduled();
     }
     //链表插入新节点
